@@ -67,8 +67,8 @@ if __name__ == "__main__":
 
     #Setto i parametri iniziali
     T = 14
-    #gamma = 1 / T
-    gamma = 0.44
+    gamma = 1 / T
+    #gamma = 0.44
     #alpha = 1 / 3.2
     alpha = 0.52
     #epsilon = 0.7
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     """
 
     totalDays = 200
-    daysIteration = 160
+    daysIteration = 140
     daysFirstIteration = totalDays - daysIteration
     #daysFirstIteration = 200
 
@@ -105,7 +105,6 @@ if __name__ == "__main__":
     mindelta = 21
     numbersOfInterval = daysIteration//deltaT
 
-
     """
     Inizializzo i vettori in cui andrò a memorizzare tutti i parametri nei singoli intervalli 
     \\TODO: REFACTORING HERE IS REQUIRED
@@ -115,18 +114,11 @@ if __name__ == "__main__":
     alphaEstimated = []
     epsilonEstimated = []
     gammaEstimated = []
-    S_est = []
-    E_est = []
-    I_est = []
-    R_est = []
-    D_est = []
-
 
     """ 
     Avvio la prima stima di parametri sulla primo range di parametri (da 0 a daysFirstIteration)
     """
     result = leastsq(error, np.asarray([beta, alpha, gamma, epsilon]), args=(initial_conditions, tspan, data, 0, daysFirstIteration))
-
 
     """
     Salvo i parametri nelle mie liste
@@ -154,13 +146,6 @@ if __name__ == "__main__":
     totalModel= []
     totalModel[0:daysFirstIteration] = model_init[:, 2]
     #totalModel[0:50,1], totalModel[0:50,2], totalModel[0:50,3], totalModel[0:50,4] = model_init
-
-    S_est.append(S_init)
-    E_est.append(E_init)
-    I_est.append(I_init)
-    R_est.append(R_init)
-    D_est.append(D_init)
-
 
     for i in range(0, numbersOfInterval):
 
@@ -198,43 +183,24 @@ if __name__ == "__main__":
         gammaEstimated.append(gammak)
 
         """Calcolo del modello di ampiezza della k_esima iterazione"""
-        modelk = odeSolver(tspank_model, initial_conditions_k,
+        modelk = odeSolver(tspank, initial_conditions_k,
                            [betaEstimated[i+1], alphaEstimated[i+1], epsilonEstimated[i+1],
                             gammaEstimated[i+1]])
 
         #print(modelk)
         """Salvaggio dei dati relativi alla finestra temporale pari a deltaT"""
-        totalModel[timek:timek_1] = modelk[:, 2]
+        totalModel[timek:timek_1] = modelk[mindelta:mindelta+deltaT, 2]
         #totalModel[timek:timek_1,0], totalModel[timek:timek_1,1],totalModel[timek:timek_1,2],totalModel[timek:timek_1,3],totalModel[timek:timek_1,4] = modelk
         #print("modelk", modelk)
 
-        """Memorizzazione dei valori calcolati all'estremo dell'intervallo, ncecessari per le condizioni iniziali dell'iterata successiva"""
-        Sk, Ek, Ik, Rk, Dk = modelk[deltaT-1, 0], modelk[deltaT-1, 1], modelk[deltaT-1, 2], modelk[deltaT-1, 3], modelk[deltaT-1, 4]
-
-        S_est.append(Sk)
-        E_est.append(Ek)
-        I_est.append(Ik)
-        R_est.append(Rk)
-        D_est.append(Dk)
 
 
-
-
-
-    # Attuo la minimizzazione per la stima dei parametri [beta, alpha, gamma, epsilon] che verranno memorizzato in result
-
-    # result[0] contiene i parametri stimati[beta, alpha, gamma, epsilon], ricalcolo il modello con i parametri stimati
-    #print("lenght" , alphaEstimated.__len__(), betaEstimated.__len__(), epsilonEstimated.__len__(), gammaEstimated.__len__())
-    #print("numbersOfInterval", numbersOfInterval)
 
     datapoints = daysFirstIteration + deltaT*numbersOfInterval
     #datapoints = deltaT * numbersOfInterval
     tspanfinal = np.arange(0, datapoints, 1)
 
     #ro0 = 0.9
-
-    # Ottengo le singole soluzioni valutate
-    #S1, E1, I1, R1, D1 = modelfinal[:, 0], modelfinal[:, 1], modelfinal[:, 2], modelfinal[:, 3], modelfinal[:, 4]
 
 
     #Plot initial Valued Model

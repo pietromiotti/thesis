@@ -87,7 +87,7 @@ if __name__ == "__main__":
     """
 
     totalDays = 200
-    daysIteration = 150
+    daysIteration = 160
     daysFirstIteration = totalDays - daysIteration
     #daysFirstIteration = 200
 
@@ -101,8 +101,8 @@ if __name__ == "__main__":
     Da questa derivo il numero totale degli intervalli fornito dalla divisione troncata del numero di giorni adibiti a questa analisi 
     (daysIteration) e l'ampiezza dell'intervallo
     """
-    deltaT = 14
-    mindelta = 14
+    deltaT = 7
+    mindelta = 21
     numbersOfInterval = daysIteration//deltaT
 
 
@@ -166,25 +166,22 @@ if __name__ == "__main__":
 
         """Calcolo dell'intervallo temporale"""
         timek = totalDays - daysIteration + deltaT*i
-        timek_analysis = timek
+        timek_analysis = timek - mindelta
+
         timek_1 = totalDays - daysIteration + deltaT*(i+1)
+        timek_1_analysis = timek_1
 
 
         #print([betaEstimated[i], alphaEstimated[i], gammaEstimated[i], epsilonEstimated[i]])
 
-        """Creazione di una finestra di analisi più ampia verso destra"""
-        if not (timek_1 + mindelta > totalDays):
-            timek_1_analysis = timek_1 + mindelta
-        else:
-            timek_1_analysis = timek_1
 
         """Time discretization for the interval"""
         tspank = np.arange(timek_analysis, timek_1_analysis, 1)
         tspank_model = np.arange(timek, timek_1, 1)
 
-
         """Utilizzo delle condizioni initiali della k_esima iterazione"""
-        initial_conditions_k = [E_est[i], data[timek, 0], data[timek, 1], data[timek, 2]]
+        esposti_k = data[timek_analysis, 0]*10
+        initial_conditions_k = [esposti_k, data[timek_analysis, 0], data[timek_analysis, 1], data[timek_analysis, 2]]
         #print("initial condition", initial_conditions_k)
 
 
@@ -194,13 +191,11 @@ if __name__ == "__main__":
         """Memorizzazione dei parametri"""
         betak, alphak, gammak, epsilonk = resultIteration[0]
 
-
         """Archivio dei parametri stimati della k_esima iterazione"""
         betaEstimated.append(betak)
         alphaEstimated.append(alphak)
         epsilonEstimated.append(epsilonk)
         gammaEstimated.append(gammak)
-
 
         """Calcolo del modello di ampiezza della k_esima iterazione"""
         modelk = odeSolver(tspank_model, initial_conditions_k,
@@ -209,7 +204,7 @@ if __name__ == "__main__":
 
         #print(modelk)
         """Salvaggio dei dati relativi alla finestra temporale pari a deltaT"""
-        totalModel[timek:timek_1] = modelk[0:deltaT, 2]
+        totalModel[timek:timek_1] = modelk[:, 2]
         #totalModel[timek:timek_1,0], totalModel[timek:timek_1,1],totalModel[timek:timek_1,2],totalModel[timek:timek_1,3],totalModel[timek:timek_1,4] = modelk
         #print("modelk", modelk)
 
@@ -223,6 +218,9 @@ if __name__ == "__main__":
         D_est.append(Dk)
 
 
+
+
+
     # Attuo la minimizzazione per la stima dei parametri [beta, alpha, gamma, epsilon] che verranno memorizzato in result
 
     # result[0] contiene i parametri stimati[beta, alpha, gamma, epsilon], ricalcolo il modello con i parametri stimati
@@ -230,6 +228,7 @@ if __name__ == "__main__":
     #print("numbersOfInterval", numbersOfInterval)
 
     datapoints = daysFirstIteration + deltaT*numbersOfInterval
+    #datapoints = deltaT * numbersOfInterval
     tspanfinal = np.arange(0, datapoints, 1)
 
     #ro0 = 0.9

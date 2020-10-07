@@ -5,8 +5,8 @@ from scipy.integrate import odeint, solve_ivp
 
 from dataManagement import data
 
-
-
+from numpy import exp, linspace, pi, random, sign, sin
+from lmfit import Parameters, fit_report, minimize
 
 '''
 We have implemented the SEIRD model, a variation of classical SIR model.
@@ -35,7 +35,7 @@ N = 4400000
 """
 
 totalDays = 200
-daysIteration = 150
+daysIteration = 170
 daysFirstIteration = totalDays - daysIteration
 
 """
@@ -98,10 +98,10 @@ def fodeModel(z, t, ro, alpha, gamma, epsilon):
 def odeSolver(t, initial_conditions, params):
     initE, initI, initR, initD = initial_conditions
     initS = N - initE - initI - initR - initD
-    beta = params[0]
-    alpha = params[1]
-    gamma = params[2]
-    epsilon = params[3]
+    beta = params['beta']
+    alpha = params['alpha']
+    gamma = params['gamma']
+    epsilon = params['epsilon']
 
     res = odeint(odeModel, [initS, initE, initI, initR, initD], t, args=(beta, alpha, gamma, epsilon))
     return res
@@ -111,10 +111,10 @@ def odeSolver(t, initial_conditions, params):
 def fodeSolver(t, initial_conditions, params):
     initE, initI, initR, initD = initial_conditions
     initS = N - initE - initI - initR - initD
-    ro = params[0]
-    alpha = params[1]
-    gamma = params[2]
-    epsilon = params[3]
+    ro = params['ro']
+    alpha = params['alpha']
+    gamma = params['gamma']
+    epsilon = params['epsilon']
 
     res = odeint(fodeModel, [initS, initE, initI, initR, initD], t, args=(ro, alpha, gamma, epsilon))
     return res
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     initD = data[0, 2]
 
     #Setto i parametri iniziali
-    T = 21
+    T = 20
     gamma = 1 / T
     #gamma = 0.44
     #alpha = 1 / 3.2
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     #epsilon = 0.7
     epsilon = 0.16
     #beta = 0.077
-    beta = 0.004
+    beta = 0.1
     R0 = beta*T
 
     #I giorni totali sono in realtà 208 (in dpc-emilia), prendiamo i primi 200
@@ -160,32 +160,43 @@ if __name__ == "__main__":
     #Creo un vettore da 0 a daysFirstIteration (time discretization)
     tspan = np.arange(0, daysFirstIteration, 1)
 
+    parametersToOptimize = Parameters()
+    parametersToOptimize.add('beta', beta, min=0.1, max=0.3)
+    parametersToOptimize.add('alpha', alpha)
+    parametersToOptimize.add('gamma', gamma,  min=0.04, max=0.05)
+    parametersToOptimize.add('epsilon', epsilon)
 
     """ 
     Avvio la prima stima di parametri sulla primo range di parametri (da 0 a daysFirstIteration)
     """
-    result = leastsq(error, np.asarray([beta, alpha, gamma, epsilon]), args=(initial_conditions, tspan, data, 0, daysFirstIteration))
+    result = minimize(error, parametersToOptimize, args=(initial_conditions, tspan, data, 0, daysFirstIteration))
+    beta0 = result.params['beta'].value
+    alpha0 = result.params['alpha'].value
+    epsilon0 = result.params['epsilon'].value
+    gamma0 = result.params['gamma'].value
+
+
 
     """
     Salvo i parametri nelle mie liste
     """
 
     ro0 = 0.9
-    beta0, alpha0, gamma0, epsilon0 = result[0]
+    #beta0, alpha0, gamma0, epsilon0 = result[""]
     betaEstimated.append(beta0)
     alphaEstimated.append(alpha0)
     epsilonEstimated.append(epsilon0)
     gammaEstimated.append(gamma0)
     roEstimated.append(ro0)
 
-    """
-    Calcolo il modello con i parametri stimati nella prima iterazione
-    """
-    model_init = odeSolver(tspan, initial_conditions, [betaEstimated[0], alphaEstimated[0], gammaEstimated[0], epsilonEstimated[0]])
+    parametersToOptimize.add('beta', betaEstimated[0], min=0.1, max=0.3)
+    parametersToOptimize.add('alpha', alphaEstimated[0])
+    parametersToOptimize.add('gamma', gammaEstimated[0],  min=0.04, max=0.05)
+    parametersToOptimize.add('epsilon', epsilonEstimated[0])
+   
+    model_init = odeSolver(tspan, initial_conditions, parametersToOptimize)
 
-    """
-    Salvo i parametri stimati nell'estremo dell'intervallo, necessari per essere riutilizzati come condizioni inizali per le stime successive
-    """
+   
     indexInit = totalDays - daysIteration - 1
 
     totalModelInfected = []
@@ -196,9 +207,10 @@ if __name__ == "__main__":
     totalModelRecovered[0:daysFirstIteration] = model_init[:, 3]
     totalModelDeath[0:daysFirstIteration] = model_init[:, 4]
 
+
     for i in range(0, numbersOfInterval):
 
-        """Calcolo dell'intervallo temporale"""
+
         timek = totalDays - daysIteration + deltaT*i
         timek_analysis = timek - mindelta
 
@@ -206,80 +218,44 @@ if __name__ == "__main__":
         timek_1_analysis = timek_1
 
 
-        """Time discretization for the interval"""
+
         tspank = np.arange(timek_analysis, timek_1_analysis, 1)
         tspank_model = np.arange(timek, timek_1, 1)
 
-        """Utilizzo delle condizioni initiali della k_esima iterazione"""
+
         esposti_k = data[timek_analysis, 0]*10
 
         initial_conditions_k = [esposti_k, data[timek_analysis, 0], data[timek_analysis, 1], data[timek_analysis, 2]]
 
-        """Stima dei parametri sulla finestra di analisi"""
+        parametersToOptimize.add('beta', betaEstimated[i], min=0.1, max=0.3)
+        parametersToOptimize.add('alpha', alphaEstimated[i])
+        parametersToOptimize.add('gamma', gammaEstimated[i],  min=0.04, max=0.05)
+        parametersToOptimize.add('epsilon', epsilonEstimated[i])
         #resultIteration = leastsq(error, np.asarray([beta, alpha, gamma, epsilon]), args=(initial_conditions_k, tspank, data, timek_analysis, timek_1_analysis))
-        resultIteration = leastsq(error, np.asarray([betaEstimated[i], alphaEstimated[i], gammaEstimated[i], epsilonEstimated[i]]), args=(initial_conditions_k, tspank, data, timek_analysis, timek_1_analysis))
+        resultIteration = minimize(error, parametersToOptimize, args=(initial_conditions_k, tspank, data, timek_analysis, timek_1_analysis))
 
-        """Memorizzazione dei parametri"""
-        betak, alphak, gammak, epsilonk = resultIteration[0]
+        betak = resultIteration.params['beta'].value
+        alphak = resultIteration.params['alpha'].value
+        epsilonk = resultIteration.params['epsilon'].value
+        gammak = resultIteration.params['gamma'].value
 
-        """Archivio dei parametri stimati della k_esima iterazione"""
+
         betaEstimated.append(betak)
         alphaEstimated.append(alphak)
         epsilonEstimated.append(epsilonk)
         gammaEstimated.append(gammak)
 
-        """
-        Calcolo del modello di ampiezza della k_esima iterazione
-        modelk = odeSolver(tspank_model, initial_conditions_k,
-                           [betaEstimated[i+1], alphaEstimated[i+1], epsilonEstimated[i+1],
-                            gammaEstimated[i+1]])
+        parametersToOptimize.add('beta', betaEstimated[i+1], min=0.1, max=0.3)
+        parametersToOptimize.add('alpha', alphaEstimated[i+1])
+        parametersToOptimize.add('gamma', gammaEstimated[i+1], min=0.04, max=0.05)
+        parametersToOptimize.add('epsilon', epsilonEstimated[i+1])
+        #Calcolo del modello di ampiezza della k_esima iterazione
+        modelk = odeSolver(tspank_model, initial_conditions_k, parametersToOptimize)
 
-        
-        Salvaggio dei dati relativi alla finestra temporale pari a deltaT
+        #Salvaggio dei dati relativi alla finestra temporale pari a deltaT
         totalModelInfected[timek:timek_1] = modelk[:, 2]
         totalModelRecovered[timek:timek_1] = modelk[:, 3]
         totalModelDeath[timek:timek_1] = modelk[:, 4]
-        """
-
-    for j in range(0, numbersOfInterval):
-        """Calcolo dell'intervallo temporale"""
-        timek = totalDays - daysIteration + deltaT * j
-        timek_analysis = timek - mindelta
-
-        timek_1 = totalDays - daysIteration + deltaT * (j + 1)
-        timek_1_analysis = timek_1
-
-        """Time discretization for the interval"""
-        tspank = np.arange(timek_analysis, timek_1_analysis, 1)
-        tspank_model = np.arange(timek, timek_1, 1)
-
-        """Utilizzo delle condizioni initiali della k_esima iterazione"""
-        esposti_k = data[timek_analysis, 0] * 10
-
-        initial_conditions_k = [esposti_k, data[timek_analysis, 0], data[timek_analysis, 1], data[timek_analysis, 2]]
-
-        """Stima dei parametri sulla finestra di analisi"""
-        # resultIteration = leastsq(error, np.asarray([beta, alpha, gamma, epsilon]), args=(initial_conditions_k, tspank, data, timek_analysis, timek_1_analysis))
-        #print("RO ESTIMATED", roEstimated[j])
-        resultIterationRO = leastsq(errorRO, roEstimated[j],
-                                    args=(j, initial_conditions_k, tspank, data, timek_analysis, timek_1_analysis))
-
-        """Memorizzazione dei parametri"""
-        rok = resultIterationRO[0][0]
-
-        """Archivio dei parametri stimati della k_esima iterazione"""
-        roEstimated.append(rok)
-
-        """Calcolo del modello di ampiezza della k_esima iterazione"""
-        modelkRO = fodeSolver(tspank_model, initial_conditions_k,
-                              [roEstimated[j + 1], alphaEstimated[j + 1], epsilonEstimated[j + 1],
-                               gammaEstimated[j + 1]])
-
-        """Salvaggio dei dati relativi alla finestra temporale pari a deltaT"""
-        totalModelInfected[timek:timek_1] = modelkRO[:, 2]
-        totalModelRecovered[timek:timek_1] = modelkRO[:, 3]
-        totalModelDeath[timek:timek_1] = modelkRO[:, 4]
-
 
     datapoints = daysFirstIteration + deltaT*numbersOfInterval
     tspanfinal = np.arange(0, datapoints, 1)
@@ -310,7 +286,7 @@ if __name__ == "__main__":
     plt.plot(tspanfinal, data[0:datapoints, 0], label="Infected(Observed)")
     #plt.plot(tspanfinal, data[0:datapoints, 1], label="Recovered (Observed)")
     #plt.plot(tspanfinal, data[0:datapoints, 2], label="Death (Observed)")
-    print(roEstimated)
+
 
     plt.legend()
     plt.show()

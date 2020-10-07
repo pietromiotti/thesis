@@ -168,8 +168,8 @@ if __name__ == "__main__":
 
 
         """
-        Allargo la finestra di analisi per la stima dei parametri considerando elementi più "vecchi"
-            <-deltaT->   <-deltaT->
+        Allargo (volendo) la finestra di analisi per la stima dei parametri considerando elementi più "vecchi"
+            <-midelta->  <-deltaT->
         --|------------|-----------|----------------
                     timek        timek_1
         timek_analysis           timek_1_analysis  

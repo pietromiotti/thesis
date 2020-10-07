@@ -57,10 +57,11 @@ def error(params, initial_conditions, tspan, data, timek, timek_1):
 
 
 if __name__ == "__main__":
-
 #Prendo i valori iniziali degli infetti, dei recovered e dei deceduti direttamente dal database della protezione civile
+
+
     initI = data[0, 0]
-    initE = initI * 10
+    initE = initI*10
     #initE = initI*10
     initR = data[0, 1]
     initD = data[0, 2]
@@ -87,7 +88,7 @@ if __name__ == "__main__":
     """
 
     totalDays = 200
-    daysIteration = 140
+    daysIteration = 150
     daysFirstIteration = totalDays - daysIteration
     #daysFirstIteration = 200
 
@@ -101,8 +102,8 @@ if __name__ == "__main__":
     Da questa derivo il numero totale degli intervalli fornito dalla divisione troncata del numero di giorni adibiti a questa analisi 
     (daysIteration) e l'ampiezza dell'intervallo
     """
-    deltaT = 7
-    mindelta = 21
+    deltaT = 10
+    mindelta = 0
     numbersOfInterval = daysIteration//deltaT
 
     """
@@ -135,16 +136,21 @@ if __name__ == "__main__":
     """
     model_init = odeSolver(tspan, initial_conditions, [betaEstimated[0], alphaEstimated[0], gammaEstimated[0], epsilonEstimated[0]])
 
-
     """
     Salvo i parametri stimati nell'estremo dell'intervallo, necessari per essere riutilizzati come condizioni inizali per le stime successive
     """
     indexInit = totalDays - daysIteration - 1
     #indexInit = 0
-    S_init, E_init, I_init, R_init, D_init = model_init[indexInit, 0], model_init[indexInit, 1], model_init[indexInit, 2], model_init[indexInit, 3],model_init[indexInit, 4]
+    #S_init, E_init, I_init, R_init, D_init = model_init[indexInit, 0], model_init[indexInit, 1], model_init[indexInit, 2], model_init[indexInit, 3],model_init[indexInit, 4]
 
-    totalModel= []
-    totalModel[0:daysFirstIteration] = model_init[:, 2]
+    totalModelInfected = []
+    totalModelRecovered = []
+    totalModelDeath = []
+
+
+    totalModelInfected[0:daysFirstIteration] = model_init[:, 2]
+    totalModelRecovered[0:daysFirstIteration] = model_init[:, 3]
+    totalModelDeath[0:daysFirstIteration] = model_init[:, 4]
     #totalModel[0:50,1], totalModel[0:50,2], totalModel[0:50,3], totalModel[0:50,4] = model_init
 
     for i in range(0, numbersOfInterval):
@@ -157,20 +163,17 @@ if __name__ == "__main__":
         timek_1_analysis = timek_1
 
 
-        #print([betaEstimated[i], alphaEstimated[i], gammaEstimated[i], epsilonEstimated[i]])
-
-
         """Time discretization for the interval"""
         tspank = np.arange(timek_analysis, timek_1_analysis, 1)
         tspank_model = np.arange(timek, timek_1, 1)
 
         """Utilizzo delle condizioni initiali della k_esima iterazione"""
         esposti_k = data[timek_analysis, 0]*10
-        initial_conditions_k = [esposti_k, data[timek_analysis, 0], data[timek_analysis, 1], data[timek_analysis, 2]]
-        #print("initial condition", initial_conditions_k)
 
+        initial_conditions_k = [esposti_k, data[timek_analysis, 0], data[timek_analysis, 1], data[timek_analysis, 2]]
 
         """Stima dei parametri sulla finestra di analisi"""
+        #resultIteration = leastsq(error, np.asarray([beta, alpha, gamma, epsilon]), args=(initial_conditions_k, tspank, data, timek_analysis, timek_1_analysis))
         resultIteration = leastsq(error, np.asarray([betaEstimated[i], alphaEstimated[i], gammaEstimated[i], epsilonEstimated[i]]), args=(initial_conditions_k, tspank, data, timek_analysis, timek_1_analysis))
 
         """Memorizzazione dei parametri"""
@@ -183,23 +186,20 @@ if __name__ == "__main__":
         gammaEstimated.append(gammak)
 
         """Calcolo del modello di ampiezza della k_esima iterazione"""
-        modelk = odeSolver(tspank, initial_conditions_k,
+        modelk = odeSolver(tspank_model, initial_conditions_k,
                            [betaEstimated[i+1], alphaEstimated[i+1], epsilonEstimated[i+1],
                             gammaEstimated[i+1]])
 
-        #print(modelk)
         """Salvaggio dei dati relativi alla finestra temporale pari a deltaT"""
-        totalModel[timek:timek_1] = modelk[mindelta:mindelta+deltaT, 2]
-        #totalModel[timek:timek_1,0], totalModel[timek:timek_1,1],totalModel[timek:timek_1,2],totalModel[timek:timek_1,3],totalModel[timek:timek_1,4] = modelk
-        #print("modelk", modelk)
-
-
-
+        totalModelInfected[timek:timek_1] = modelk[:, 2]
+        totalModelRecovered[timek:timek_1] = modelk[:, 3]
+        totalModelDeath[timek:timek_1] = modelk[:, 4]
 
     datapoints = daysFirstIteration + deltaT*numbersOfInterval
-    #datapoints = deltaT * numbersOfInterval
     tspanfinal = np.arange(0, datapoints, 1)
+    tspanparemeter = np.arange(totalDays-daysIteration,200,deltaT)
 
+    plt.plot()
     #ro0 = 0.9
 
 
@@ -210,7 +210,9 @@ if __name__ == "__main__":
 
     #Plot Model with estimated parameters
     #print(totalModel)
-    plt.plot(tspanfinal, totalModel[:], label="Infected (Model 2)")
+    plt.plot(tspanfinal, totalModelInfected[:], label="Infected (Model 2)")
+    plt.plot(tspanfinal, totalModelRecovered[:], label="Recovered (Model 2)")
+    plt.plot(tspanfinal, totalModelDeath[:], label="Death(Model 2)")
 
     #plt.plot(tspan, E1, label="Exposed (Model 2 )")
     #plt.plot(tspan, I1, label="Infected (Model)")
@@ -220,8 +222,8 @@ if __name__ == "__main__":
     #Plot Obeserved Value
 
     plt.plot(tspanfinal, data[0:datapoints, 0], label="Infected(Observed)")
-    #plt.plot(tspanfinal, data[0:200, 1], label="Recovered (Observed)")
-    #plt.plot(tspanfinal, data[0:200, 2], label="Death (Observed)")
+    plt.plot(tspanfinal, data[0:datapoints, 1], label="Recovered (Observed)")
+    plt.plot(tspanfinal, data[0:datapoints, 2], label="Death (Observed)")
 
     plt.legend()
     plt.show()

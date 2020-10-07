@@ -175,8 +175,6 @@ if __name__ == "__main__":
     epsilon0 = result.params['epsilon'].value
     gamma0 = result.params['gamma'].value
 
-
-
     """
     Salvo i parametri nelle mie liste
     """
@@ -209,7 +207,6 @@ if __name__ == "__main__":
 
 
     for i in range(0, numbersOfInterval):
-
 
         timek = totalDays - daysIteration + deltaT*i
         timek_analysis = timek - mindelta
@@ -273,8 +270,8 @@ if __name__ == "__main__":
     #Plot Model with estimated parameters
     #print(totalModel)
     plt.plot(tspanfinal, totalModelInfected[:], label="Infected (Model 2)")
-    #plt.plot(tspanfinal, totalModelRecovered[:], label="Recovered (Model 2)")
-    #plt.plot(tspanfinal, totalModelDeath[:], label="Death(Model 2)")
+    plt.plot(tspanfinal, totalModelRecovered[:], label="Recovered (Model 2)")
+    plt.plot(tspanfinal, totalModelDeath[:], label="Death(Model 2)")
 
     #plt.plot(tspan, E1, label="Exposed (Model 2 )")
     #plt.plot(tspan, I1, label="Infected (Model)")
@@ -284,8 +281,8 @@ if __name__ == "__main__":
     #Plot Obeserved Value
 
     plt.plot(tspanfinal, data[0:datapoints, 0], label="Infected(Observed)")
-    #plt.plot(tspanfinal, data[0:datapoints, 1], label="Recovered (Observed)")
-    #plt.plot(tspanfinal, data[0:datapoints, 2], label="Death (Observed)")
+    plt.plot(tspanfinal, data[0:datapoints, 1], label="Recovered (Observed)")
+    plt.plot(tspanfinal, data[0:datapoints, 2], label="Death (Observed)")
 
 
     plt.legend()

@@ -32,8 +32,8 @@ A questo punto suddivido i giorni totali in due parti per dividere le stime:
     - daysFirstIteration sono i giorni che predisponiamo per la prima fase del processo di ottimizzazione in cui facciamo una prima stima dei parametri
 """
 
-totalDays = 200
-daysIteration = 170
+totalDays = 230
+daysIteration = 200
 daysFirstIteration = totalDays - daysIteration
 
 """
@@ -239,5 +239,6 @@ if __name__ == "__main__":
     #plt.plot(tspanfinal, data[0:datapoints, 1], label="Recovered (Observed)")
     #plt.plot(tspanfinal, data[0:datapoints, 2], label="Death (Observed)")
 
+    #plt.plot(betaEstimated)
     plt.legend()
     plt.show()

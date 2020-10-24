@@ -1,8 +1,10 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.integrate import odeint
+import matplotlib.dates as mdates
+import datetime as dt
 
-from dataManagement import data
+from dataManagement import data, dateForPlot
 
 from lmfit import Parameters, minimize
 
@@ -32,8 +34,8 @@ A questo punto suddivido i giorni totali in due parti per dividere le stime:
     - daysFirstIteration sono i giorni che predisponiamo per la prima fase del processo di ottimizzazione in cui facciamo una prima stima dei parametri
 """
 
-totalDays = 230
-daysIteration = 200
+totalDays = 240
+daysIteration = 220
 daysFirstIteration = totalDays - daysIteration
 
 """
@@ -137,9 +139,26 @@ def errorRO(params, initial_conditions, tspan, data, timek, timek_1):
     return (sol[:, 2:5] - data[timek:timek_1]).ravel()
 
 
+
+
+def prevision(daysPrevision):
+    tspan = np.arange(totalDays, totalDays + daysPrevision, 1)
+
+    exposed = data[totalDays-1, 0] * 10
+    initial_conditions = [exposed, data[totalDays-1, 0], data[totalDays-1, 1], data[totalDays-1, 2]]
+
+    previsionParameters = Parameters()
+
+    previsionParameters.add('ro', roEstimated[roEstimated.__len__() - 1], min=0, max=1)
+    previsionParameters.add('alpha', alphaEstimated[alphaEstimated.__len__() - 1])
+    previsionParameters.add('gamma', gammaEstimated[gammaEstimated.__len__() - 1], min=0.04, max=0.05)
+    previsionParameters.add('epsilon', epsilonEstimated[epsilonEstimated.__len__() - 1])
+
+    sol = fodeSolver(tspan, initial_conditions, previsionParameters)
+    return sol
+
 if __name__ == "__main__":
     # Prendo i valori iniziali degli infetti, dei recovered e dei deceduti direttamente dal database della protezione civile
-
     "Setting dei valori iniziali, data è la matrice contenente i valori osservati, per approfondimenti si veda in dataManagement.py"
     initI = data[0, 0]
     initE = initI * 10
@@ -229,10 +248,10 @@ if __name__ == "__main__":
         tspank_model = np.arange(timek, timek_1, 1)
 
         "Aggiorno gli esposti alla k_esima iterazione"
-        esposti_k = data[timek_analysis, 0] * 10
+        exposed_k = data[timek_analysis, 0]*10
 
         "Aggiorno le condizioni iniziali considerando i veri dati osservati"
-        initial_conditions_k = [esposti_k, data[timek_analysis, 0], data[timek_analysis, 1], data[timek_analysis, 2]]
+        initial_conditions_k = [exposed_k, data[timek_analysis, 0], data[timek_analysis, 1], data[timek_analysis, 2]]
 
         parametersToOptimize.add('ro', roEstimated[k], min=0, max=1)
         parametersToOptimize.add('alpha', alphaEstimated[k])
@@ -259,37 +278,66 @@ if __name__ == "__main__":
         parametersOptimized.add('epsilon', epsilonEstimated[k + 1])
 
         "Calcolo il modello con i parametri stimati"
-        modelfj = fodeSolver(tspank_model, initial_conditions_k, parametersOptimized)
+        modelfk = fodeSolver(tspank_model, initial_conditions_k, parametersOptimized)
 
         "Salvaggio dei dati relativi alla finestra temporale pari a deltaT (da timeK a timeK_1"
-        totalModelInfected[timek:timek_1] = modelfj[:, 2]
-        totalModelRecovered[timek:timek_1] = modelfj[:, 3]
-        totalModelDeath[timek:timek_1] = modelfj[:, 4]
+        totalModelInfected[timek:timek_1] = modelfk[:, 2]
+        totalModelRecovered[timek:timek_1] = modelfk[:, 3]
+        totalModelDeath[timek:timek_1] = modelfk[:, 4]
         totalModelExposed[timek:timek_1] \
-            = modelfj[:, 1]
+            = modelfk[:, 1]
 
 
-    datapoints = daysFirstIteration + deltaT * numberOfIntervals
-    tspanfinal = np.arange(0, datapoints, 1)
-
-    plt.plot()
 
 
-    plt.plot(betaNewEstimated)
+    #Perform my Prevision
+
+    daysPrevision = 10
+    myprevision = prevision(daysPrevision)
+
+
+    totalModelInfected[totalDays:totalDays+daysPrevision] = myprevision[:, 2]
+
+
+    datapoints = daysFirstIteration + deltaT * numberOfIntervals + daysPrevision
+
+
+    #Convert DataTime to String in order to Plot the data
+    lastDay = dateForPlot[dateForPlot.__len__()-1]
+    dayPrevision = lastDay + dt.timedelta(days=daysPrevision+1)
+    days = mdates.drange(dateForPlot[0], dayPrevision, dt.timedelta(days=1))
+    daysObserved = mdates.drange(dateForPlot[0], dayPrevision, dt.timedelta(days=1))
+
+    daysArangeToPrint = mdates.drange(dateForPlot[dateForPlot.__len__()-1], dayPrevision, dt.timedelta(days=1))
+
+    #print(daysArangeToPrint)
+
+    for i in range(0, daysPrevision):
+        print(str(mdates.num2date(daysArangeToPrint[i])) + " " + str(totalModelInfected[totalDays+i]) + "\n")
+
+    #plt.plot(betaNewEstimated)
     # plt.plot(epsilonEstimated)
     # plt.plot(alphaEstimated)
     #plt.plot(betaEstimated)
+
+
     "Plot dei valori calcolati con il modello"
-    #plt.plot(tspanfinal, totalModelInfected[:], label="Infected (Model)")
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=8))
+    plt.plot(days, totalModelInfected[:], label="Infected (Model and Predicted)")
+
+
     # plt.plot(tspanfinal, totalModelExposed[:], label="Esposti (Model)")
     #plt.plot(tspanfinal, totalModelRecovered[:], label="Recovered (Model)")
     #plt.plot(tspanfinal, totalModelDeath[:], label="Death(Model)")
 
     "Plot dei valori osservati"
-    #plt.plot(tspanfinal, data[0:datapoints, 0], label="Infected(Observed)")
+    plt.plot(dateForPlot[:], data[0:datapoints, 0], label="Infected(Observed)")
     #plt.plot(tspanfinal, data[0:datapoints, 1], label="Recovered (Observed)")
     #plt.plot(tspanfinal, data[0:datapoints, 2], label="Death (Observed)")
 
     # plt.plot(betaEstimated)
+
+    plt.gcf().autofmt_xdate()
     plt.legend()
     plt.show()

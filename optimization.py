@@ -65,17 +65,28 @@ lastDayIteration = []
 
 
 def betaFunction(t, ro, iteration):
-    betaBoundary = 0
-    position = iteration
-    if position == 0 or t==lastDayIteration[k]:
-        betaBoundary= 1
+    boundarybeta = 0
+
+    if ((t >= (lastDayIteration[iteration]-1))):
+        boundarybeta= 1
 
     tk = firstDayIteration[iteration]
-    result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
-    if(betaBoundary):
-        betaEstimated.append(result)
+    """
+    Scegliere se usare beta razionale od esponenziale
+       Se si cambia, bisogna cambiare anche i vincoli di RO
+    """
+    #razionale
+    #result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
+    #esponenziale
+    result = betaEstimated[iteration] * np.e**(-ro * (t - tk))
 
-    betaNewEstimated.append(result)
+    if(boundarybeta):
+        if (len(betaEstimated)-1==iteration):
+            betaEstimated.append(result)
+        else:
+            betaEstimated[iteration+1] = result
+    else:
+        betaNewEstimated.append(result)
     return result
 
 
@@ -117,14 +128,13 @@ def odeSolver(t, initial_conditions, params):
     return res
 
 
-def fodeSolver(t, initial_conditions, params,iteration):
+def fodeSolver(t, initial_conditions, params, iteration):
     initE, initI, initR, initD = initial_conditions
     initS = N - initE - initI - initR - initD
     ro = params['ro']
     alpha = params['alpha']
     gamma = params['gamma']
     epsilon = params['epsilon']
-
     res = odeint(fodeModel, [initS, initE, initI, initR, initD], t, args=(ro, alpha, gamma, epsilon, iteration))
     return res
 
@@ -162,6 +172,7 @@ def deltaTCalibration(infected, iteration):
     else:
         deltaT = constants.MEDIUM_INTERVAL
 
+
     firstDayIteration.append(lastDay)
     lastDayIteration.append(lastDay + deltaT)
 
@@ -170,12 +181,13 @@ def deltaTCalibration(infected, iteration):
 def prevision(daysPrevision):
     tspan = np.arange(totalDays, totalDays + daysPrevision, 1)
 
-    exposed = data[totalDays-1, 0] * 10
-    initial_conditions = [exposed, data[totalDays-1, 0], data[totalDays-1, 1], data[totalDays-1, 2]]
+    exposed = data[lastDayIteration[numberOfIteration]-1, 0] * 10
+    initial_conditions = [exposed, data[lastDayIteration[numberOfIteration]-1, 0], data[lastDayIteration[numberOfIteration]-1, 1], data[lastDayIteration[numberOfIteration]-1, 2]]
 
     previsionParameters = Parameters()
 
-    previsionParameters.add('ro', roEstimated[roEstimated.__len__() - 1], min=0, max=1)
+    previsionParameters.add('ro', roEstimated[roEstimated.__len__() - 1])
+    #previsionParameters.add('beta', betaNewEstimated[betaNewEstimated.__len__() - 1])
     previsionParameters.add('alpha', alphaEstimated[alphaEstimated.__len__() - 1])
     previsionParameters.add('gamma', gammaEstimated[gammaEstimated.__len__() - 1], min=0.04, max=0.05)
     previsionParameters.add('epsilon', epsilonEstimated[epsilonEstimated.__len__() - 1])
@@ -192,11 +204,11 @@ if __name__ == "__main__":
     initD = data[0, 2]
 
     "Setting dei parametri iniziali"
-    T = 20
+    T = constants.initT
     gamma = 1 / T
-    alpha = 0.52
-    epsilon = 0.16
-    beta = 0.1
+    alpha = constants.initAlpha
+    epsilon = constants.initEpsilon
+    beta = constants.initBeta
 
 
     initial_conditions = [initE, initI, initR, initD]
@@ -217,7 +229,7 @@ if __name__ == "__main__":
     alpha0 = result.params['alpha'].value
     epsilon0 = result.params['epsilon'].value
     gamma0 = result.params['gamma'].value
-    ro0 = 0.9
+    ro0 = constants.initRO
 
     "Salvo i parametri nelle mie liste"
     betaEstimated.append(beta0)
@@ -276,7 +288,7 @@ if __name__ == "__main__":
         "Aggiorno le condizioni iniziali considerando i veri dati osservati"
         initial_conditions_k = [exposed_k, data[timek, 0], data[timek, 1], data[timek, 2]]
 
-        parametersToOptimize.add('ro', roEstimated[k], min=0, max=1)
+        parametersToOptimize.add('ro', roEstimated[k], min=0)
         parametersToOptimize.add('alpha', alphaEstimated[k])
         parametersToOptimize.add('gamma', gammaEstimated[k], min=0.04, max=0.05)
         parametersToOptimize.add('epsilon', epsilonEstimated[k])
@@ -295,7 +307,7 @@ if __name__ == "__main__":
         epsilonEstimated.append(epsilonk)
         gammaEstimated.append(gammak)
 
-        parametersOptimized.add('ro', roEstimated[k + 1], min=0, max=1)
+        parametersOptimized.add('ro', roEstimated[k + 1], min=0)
         parametersOptimized.add('alpha', alphaEstimated[k + 1])
         parametersOptimized.add('gamma', gammaEstimated[k + 1], min=0.04, max=0.05)
         parametersOptimized.add('epsilon', epsilonEstimated[k + 1])
@@ -316,7 +328,7 @@ if __name__ == "__main__":
             finishedIteration = 0
             numberOfIteration = k
         else:
-            k=k + 1
+            k=k+1
 
 
 
@@ -328,8 +340,8 @@ if __name__ == "__main__":
     totalModelInfected[lastDayIteration[k]:lastDayIteration[k]+daysPrevision] = myprevision[:, 2]
 
 
-    datapoints = lastDayIteration[k] + daysPrevision
 
+    datapoints = lastDayIteration[k] + daysPrevision
 
 
     #Convert DataTime to String in order to Plot the data
@@ -338,26 +350,37 @@ if __name__ == "__main__":
     dayPrevision = lastDay + dt.timedelta(days=daysPrevision+1)
     days = mdates.drange(dateForPlot[0], dayPrevision, dt.timedelta(days=1))
 
-    R0 = betaNewEstimated * T
+    daysArangeToPrint = mdates.drange(dateForPlot[lastDayIteration[numberOfIteration]] , dayPrevision, dt.timedelta(days=1))
+
+    # print(daysArangeToPrint)
+
+    for i in range(0, daysPrevision):
+        print(str(mdates.num2date(daysArangeToPrint[i])) + " " + str(totalModelInfected[lastDayIteration[numberOfIteration] + i]) + "\n")
+    #R0 = betaNewEstimated * T
 
     #plt.plot(epsilonEstimated)
     #plt.plot(alphaEstimated)
     #plt.plot(betaEstimated)
+    #plt.plot(betaNewEstimated)
+    #plt.plot(R0)
 
 
     "Plot dei valori calcolati con il modello"
+
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
     plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=8))
-    #plt.plot(days, totalModelInfected[:], label="Infected (Model and Predicted)")
+    plt.plot(days, totalModelInfected[:], label="Infected (Model and Predicted)")
+
+    plt.plot(dateForPlot[0:lastDayIteration[k]], data[0:lastDayIteration[k], 0], label="Infected(Observed)")
 
 
     #plt.plot(dateForPlot[0:lastDayIteration[numberOfIteration]], totalModelExposed[:], label="Esposti (Model)")
-    plt.plot(dateForPlot[0:lastDayIteration[numberOfIteration]], totalModelRecovered[:], label="Recovered (Model)")
-    plt.plot(dateForPlot[0:lastDayIteration[numberOfIteration]], totalModelDeath[:], label="Death(Model)")
+    #plt.plot(dateForPlot[0:lastDayIteration[numberOfIteration]], totalModelRecovered[:], label="Recovered (Model)")
+    #plt.plot(dateForPlot[0:lastDayIteration[numberOfIteration]], totalModelDeath[:], label="Death(Model)")
 
     "Plot dei valori osservati"
+    #print(totalModelExposed)
 
-    #plt.plot(dateForPlot[0:lastDayIteration[k]], data[0:lastDayIteration[k], 0], label="Infected(Observed)")
     #plt.plot(dateForPlot[0:lastDayIteration[k]], data[0:lastDayIteration[k], 1], label="Recovered (Observed)")
     #plt.plot(dateForPlot[0:lastDayIteration[k]], data[0:lastDayIteration[k], 2], label="Death (Observed)")
 

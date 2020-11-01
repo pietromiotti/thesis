@@ -1,5 +1,17 @@
 class constants :
-    "Popolazione dell'Emilia Romagna"
+
+
+    """
+    Parametri Iniziali
+    """
+    initRO = 0.9
+    initT = 20
+    initAlpha = 0.52
+    initEpsilon = 0.16
+    initBeta = 0.1
+
+
+    #Popolazione dell'Emilia Romagna
     N = 4400000
 
     """
@@ -10,7 +22,7 @@ class constants :
         - daysFirstIteration sono i giorni che predisponiamo per la prima fase del processo di ottimizzazione in cui facciamo una prima stima dei parametri
     """
     totalDays = 240
-    daysIteration = 220
+    daysIteration = 210
     daysFirstIteration = totalDays - daysIteration
 
     """
@@ -34,5 +46,5 @@ class constants :
     ERROR_RANGE_MIN_INTERVAL = 600
     ERROR_RANGE_MAX_INTERVAL = 300
 
-    daysPrevision = 10
+    daysPrevision = 30
 

@@ -1,9 +1,22 @@
 import pandas
 import datetime as dt
+from constants import constants
+
+"""Importare il file"""
+df = pandas.read_csv('./regioni3110.csv', index_col=None);
+
+"""Selezionare le colonne"""
+columns = ['data', 'totale_positivi', 'dimessi_guariti', 'deceduti']
+df_regione = pandas.DataFrame(columns=columns);
+for index, row in df.iterrows():
+
+    """Scegliere la regione da voler analizzare"""
+    if (row['codice_regione'] == 8 ):
+        df_regione = df_regione.append(row[columns]);
 
 
-data_emilia = pandas.read_csv('./dpc-emilia-new-2.csv', index_col=None);
-data = data_emilia.loc[0:239, ['totale_positivi', 'dimessi_guariti', 'deceduti']].values
-dates = data_emilia.loc[0:239, ['data']].values
+data = df_regione.loc[:, ['totale_positivi', 'dimessi_guariti', 'deceduti']].astype('float').values
+constants.totalDays = len(data)
 
+dates = df_regione.loc[:, ['data']].values
 dateForPlot = [dt.datetime.strptime(d[0], '%Y-%m-%dT%H:%M:%S').date() for d in dates]

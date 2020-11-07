@@ -1,3 +1,5 @@
+from dataManagement import data
+
 class constants :
 
 
@@ -11,8 +13,10 @@ class constants :
     initBeta = 0.1
 
 
+    firstDay = 0
+
     #Popolazione dell'Emilia Romagna
-    N = 4400000
+    N = 10600000
 
     """
     In questa fase decidiamo come procedere con il modello: 
@@ -21,9 +25,13 @@ class constants :
         - daysIteration sono i giorni che decidiamo di prendere in considerazione per il processo di ottimizzazione discretizzato
         - daysFirstIteration sono i giorni che predisponiamo per la prima fase del processo di ottimizzazione in cui facciamo una prima stima dei parametri
     """
-    totalDays = 240
-    daysIteration = 210
-    daysFirstIteration = totalDays - daysIteration
+    totalDays = len(data)
+
+    daysFirstIteration = 30
+
+    daysIteration = totalDays - firstDay - daysFirstIteration
+
+    #daysFirstIteration = firstDay + totalDays - daysIteration
 
     """
        Definisco il deltaT iniziale su cui fare la mia prima calibrazione con la prima iterazione
@@ -46,5 +54,6 @@ class constants :
     ERROR_RANGE_MIN_INTERVAL = 600
     ERROR_RANGE_MAX_INTERVAL = 300
 
-    daysPrevision = 30
+
+    daysPrevision = 60
 

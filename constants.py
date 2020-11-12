@@ -11,6 +11,7 @@ class constants :
     initAlpha = 0.52
     initEpsilon = 0.16
     initBeta = 0.1
+    initM = 2
 
 
     firstDay = 0
@@ -55,5 +56,5 @@ class constants :
     ERROR_RANGE_MAX_INTERVAL = 300
 
 
-    daysPrevision = 60
+    daysPrevision = 30
 

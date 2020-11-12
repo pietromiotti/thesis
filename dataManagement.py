@@ -6,7 +6,7 @@ import datetime as dt
 df = pandas.read_csv('./regioni0611.csv', index_col=None);
 
 """Selezionare le colonne"""
-columns = ['data', 'totale_positivi', 'dimessi_guariti', 'deceduti']
+columns = ['data', 'totale_positivi', 'dimessi_guariti', 'deceduti', 'tamponi', 'totale_casi']
 df_regione = pandas.DataFrame(columns=columns);
 for index, row in df.iterrows():
 
@@ -15,7 +15,7 @@ for index, row in df.iterrows():
         df_regione = df_regione.append(row[columns]);
 
 
-data = df_regione.loc[:, ['totale_positivi', 'dimessi_guariti', 'deceduti']].astype('float').values
+data = df_regione.loc[:, ['totale_positivi', 'dimessi_guariti', 'deceduti', 'tamponi', 'totale_casi']].astype('float').values
 
 dates = df_regione.loc[:, ['data']].values
 dateForPlot = [dt.datetime.strptime(d[0], '%Y-%m-%dT%H:%M:%S').date() for d in dates]

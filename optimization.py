@@ -76,7 +76,8 @@ def betaFunction(t, ro, iteration):
        Se si cambia, bisogna cambiare anche i vincoli di RO
     """
     #razionale
-    result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
+    result = betaEstimated[iteration] * (1 - ro * (t - tk) / (lastDayIteration[iteration] - firstDayIteration[iteration]))
+    #result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
     #esponenziale
     #result = betaEstimated[iteration] * np.e**(-ro * (t - tk))
 
@@ -142,12 +143,12 @@ def fodeSolver(t, initial_conditions, params, iteration):
 # Definisco la funzione "error" deve essere minimizzata. Questa funzione contiene la differenza tra il valore valocato dal modello ed i dati effettivi
 def error(params, initial_conditions, tspan, data, timek, timek_1):
     sol = odeSolver(tspan, initial_conditions, params)
-    return (sol[:, 2:5] - data[timek:timek_1]).ravel()
+    return (sol[:, 2:5] - data[timek:timek_1, 0:3]).ravel()
 
 
 def errorRO(params, initial_conditions, tspan, data, iteration):
     sol = fodeSolver(tspan, initial_conditions, params, iteration)
-    return (sol[:, 2:5] - data[firstDayIteration[iteration]:lastDayIteration[iteration]]).ravel()
+    return (sol[:, 2:5] - data[firstDayIteration[iteration]:lastDayIteration[iteration], 0:3]).ravel()
 
 
 
@@ -181,7 +182,7 @@ def deltaTCalibration(infected, iteration):
 def prevision(daysPrevision):
     tspan = np.arange(totalDays, totalDays + daysPrevision, 1)
 
-    exposed = data[lastDayIteration[numberOfIteration]-1, 0] * 10
+    exposed =  data[lastDayIteration[numberOfIteration]-1, 0] * np.e**(1 + data[lastDayIteration[numberOfIteration]-1, 4]/data[lastDayIteration[numberOfIteration]-1, 3])
     initial_conditions = [exposed, data[lastDayIteration[numberOfIteration]-1, 0], data[lastDayIteration[numberOfIteration]-1, 1], data[lastDayIteration[numberOfIteration]-1, 2]]
 
     previsionParameters = Parameters()
@@ -199,7 +200,7 @@ if __name__ == "__main__":
     # Prendo i valori iniziali degli infetti, dei recovered e dei deceduti direttamente dal database della protezione civile
     "Setting dei valori iniziali, data è la matrice contenente i valori osservati, per approfondimenti si veda in dataManagement.py"
     initI = data[constants.firstDay, 0]
-    initE = initI * 10
+    initE = initI * np.e**(1+ data[constants.firstDay, 4]/data[constants.firstDay, 3])
     initR = data[constants.firstDay, 1]
     initD = data[constants.firstDay, 2]
 
@@ -239,7 +240,7 @@ if __name__ == "__main__":
     roEstimated.append(ro0)
 
     parametersOptimized = Parameters();
-    parametersOptimized.add('beta', betaEstimated[0], min=0, max=1)
+    parametersOptimized.add('beta', betaEstimated[0], min=0)
     parametersOptimized.add('alpha', alphaEstimated[0])
     parametersOptimized.add('gamma', gammaEstimated[0], min=0.04, max=0.05)
     parametersOptimized.add('epsilon', epsilonEstimated[0])
@@ -283,7 +284,7 @@ if __name__ == "__main__":
         tspank_model = np.arange(timek, timek_1, 1)
 
         "Aggiorno gli esposti alla k_esima iterazione"
-        exposed_k = data[timek, 0]*10
+        exposed_k = data[timek, 0] * np.e**(roEstimated[k] + data[timek, 4]/data[timek, 3])
 
         "Aggiorno le condizioni iniziali considerando i veri dati osservati"
         initial_conditions_k = [exposed_k, data[timek, 0], data[timek, 1], data[timek, 2]]
@@ -353,8 +354,7 @@ if __name__ == "__main__":
     days = mdates.drange(dateForPlot[constants.firstDay], dayPrevision, dt.timedelta(days=1))
 
     daysArangeToPrint = mdates.drange(lastDay, dayPrevision, dt.timedelta(days=1))
-    print(lastDay)
-    print(daysArangeToPrint)
+
     # print(daysArangeToPrint)
 
     for i in range(0, daysPrevision):
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     #plt.plot(betaNewEstimated)
     #plt.plot(R0)
 
-
+    #plt.plot(roEstimated)
     "Plot dei valori calcolati con il modello"
 
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
@@ -376,7 +376,7 @@ if __name__ == "__main__":
 
     plt.plot(dateForPlot[constants.firstDay:lastDayIteration[k]], data[constants.firstDay:lastDayIteration[k], 0], label="Infected(Observed)")
 
-
+    print(roEstimated)
     #plt.plot(dateForPlot[constants.firstDay:lastDayIteration[numberOfIteration]], totalModelExposed[:], label="Esposti (Model)")
     #plt.plot(dateForPlot[constants.firstDay:lastDayIteration[numberOfIteration]], totalModelRecovered[:], label="Recovered (Model)")
     #plt.plot(dateForPlot[constants.firstDay:lastDayIteration[numberOfIteration]], totalModelDeath[:], label="Death(Model)")
@@ -387,7 +387,7 @@ if __name__ == "__main__":
     #plt.plot(dateForPlot[0:lastDayIteration[k]], data[0:lastDayIteration[k], 1], label="Recovered (Observed)")
     #plt.plot(dateForPlot[0:lastDayIteration[k]], data[0:lastDayIteration[k], 2], label="Death (Observed)")
 
-    # plt.plot(betaEstimated)
+    #plt.plot(betaEstimated)
 
     plt.gcf().autofmt_xdate()
 

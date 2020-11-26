@@ -24,7 +24,7 @@ df_regione = pandas.DataFrame(columns=columns);
 for index, row in df.iterrows():
 
     """Scegliere la regione da voler analizzare"""
-    if (row['codice_regione'] == 3 ):
+    if (row['codice_regione'] == 8 ):
         df_regione = df_regione.append(row[columns]);
 
 

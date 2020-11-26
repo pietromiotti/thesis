@@ -4,7 +4,7 @@ from scipy.integrate import odeint
 import matplotlib.dates as mdates
 import datetime as dt
 
-from dataManagement import data, dateForPlot
+from dataManagement import data, dateForPlot, pandas
 from constants import constants
 
 from lmfit import Parameters, minimize
@@ -76,9 +76,9 @@ def betaFunction(t, ro, iteration):
        Se si cambia, bisogna cambiare anche i vincoli di RO
     """
     #razionale
-    #result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
+    result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
     #esponenziale
-    result = betaEstimated[iteration] * np.e**(-ro * (t - tk))
+    #result = betaEstimated[iteration] * np.e**(-ro * (t - tk))
 
     if(boundarybeta):
         if (len(betaEstimated)-1==iteration):
@@ -287,8 +287,8 @@ if __name__ == "__main__":
         "Aggiorno le condizioni iniziali considerando i veri dati osservati"
         initial_conditions_k = [exposed_k, data[timek, 0], data[timek, 1], data[timek, 2]]
 
-        parametersToOptimize.add('ro', roEstimated[k], min=0)
-        #parametersToOptimize.add('ro', roEstimated[k], min=0, max=1)
+        #parametersToOptimize.add('ro', roEstimated[k], min=0)
+        parametersToOptimize.add('ro', roEstimated[k], min=0, max=1)
         parametersToOptimize.add('alpha', alphaEstimated[k])
         parametersToOptimize.add('gamma', gammaEstimated[k], min=0.04, max=0.05)
         parametersToOptimize.add('epsilon', epsilonEstimated[k])
@@ -352,12 +352,27 @@ if __name__ == "__main__":
     days = mdates.drange(dateForPlot[constants.firstDay], dayPrevision, dt.timedelta(days=1))
 
     daysArangeToPrint = mdates.drange(lastDay, dayPrevision, dt.timedelta(days=1))
-    print(lastDay)
-    print(daysArangeToPrint)
+    daysArangeToPrint = mdates.drange(lastDay, dayPrevision, dt.timedelta(days=1))
     # print(daysArangeToPrint)
 
+    lenghtInfected = len(data[:,0])
+
+    columns = ['data', 'osservati', 'stimati']
+    df_comparison = pandas.DataFrame(columns=columns);
+
     for i in range(0, daysPrevision):
-       print(str(mdates.num2date(daysArangeToPrint[i])) + " " + str(totalModelInfected[lastDayIteration[numberOfIteration] + i - constants.firstDay]) + "\n")
+        if(lastDayIteration[numberOfIteration] + i < lenghtInfected):
+            df2 = pandas.DataFrame({"data": mdates.num2date(daysArangeToPrint[i]),
+                                "osservati": data[lastDayIteration[numberOfIteration]-1 + i, 0],
+                                "stimati":  totalModelInfected[lastDayIteration[numberOfIteration] + i - constants.firstDay]}, index=[0])
+            df_comparison = df_comparison.append(df2, ignore_index = True)
+
+            print(str(mdates.num2date(daysArangeToPrint[i])) + "Forecasted " + str(totalModelInfected[lastDayIteration[numberOfIteration] + i - constants.firstDay]) +
+                 " Obseved " + str(data[lastDayIteration[numberOfIteration]-1 + i, 0]) + "\n")
+
+    df_comparison.to_csv("comparison.csv")
+
+
     R0 = betaNewEstimated * T
 
     #plt.plot(epsilonEstimated)

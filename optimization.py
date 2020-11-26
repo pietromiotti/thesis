@@ -76,9 +76,9 @@ def betaFunction(t, ro, iteration):
        Se si cambia, bisogna cambiare anche i vincoli di RO
     """
     #razionale
-    result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
+    #result = betaEstimated[iteration] * (1 - ro * (t - tk) / t)
     #esponenziale
-    #result = betaEstimated[iteration] * np.e**(-ro * (t - tk))
+    result = betaEstimated[iteration] * np.e**(-ro * (t - tk))
 
     if(boundarybeta):
         if (len(betaEstimated)-1==iteration):
@@ -101,7 +101,6 @@ def odeModel(z, t, beta, alpha, gamma, epsilon):
     dDdt = gamma * I * epsilon
 
     return [dSdt, dEdt, dIdt, dRdt, dDdt]
-
 
 def fodeModel(z, t, ro, alpha, gamma, epsilon, iteration):
     S, E, I, R, D = z
@@ -288,8 +287,8 @@ if __name__ == "__main__":
         "Aggiorno le condizioni iniziali considerando i veri dati osservati"
         initial_conditions_k = [exposed_k, data[timek, 0], data[timek, 1], data[timek, 2]]
 
-        #parametersToOptimize.add('ro', roEstimated[k], min=0)
-        parametersToOptimize.add('ro', roEstimated[k], min=0, max=1)
+        parametersToOptimize.add('ro', roEstimated[k], min=0)
+        #parametersToOptimize.add('ro', roEstimated[k], min=0, max=1)
         parametersToOptimize.add('alpha', alphaEstimated[k])
         parametersToOptimize.add('gamma', gammaEstimated[k], min=0.04, max=0.05)
         parametersToOptimize.add('epsilon', epsilonEstimated[k])

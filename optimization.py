@@ -359,7 +359,7 @@ if __name__ == "__main__":
 
     for i in range(0, daysPrevision):
        print(str(mdates.num2date(daysArangeToPrint[i])) + " " + str(totalModelInfected[lastDayIteration[numberOfIteration] + i - constants.firstDay]) + "\n")
-    R0 = betaNewEstimated * T
+    #R0 = betaNewEstimated * T
 
     #plt.plot(epsilonEstimated)
     #plt.plot(alphaEstimated)
@@ -376,7 +376,7 @@ if __name__ == "__main__":
 
     plt.plot(dateForPlot[constants.firstDay:lastDayIteration[k]], data[constants.firstDay:lastDayIteration[k], 0], label="Infected(Observed)")
 
-    print(roEstimated)
+    #plt.plot(roEstimated)
     #plt.plot(dateForPlot[constants.firstDay:lastDayIteration[numberOfIteration]], totalModelExposed[:], label="Esposti (Model)")
     #plt.plot(dateForPlot[constants.firstDay:lastDayIteration[numberOfIteration]], totalModelRecovered[:], label="Recovered (Model)")
     #plt.plot(dateForPlot[constants.firstDay:lastDayIteration[numberOfIteration]], totalModelDeath[:], label="Death(Model)")

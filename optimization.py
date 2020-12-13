@@ -385,7 +385,7 @@ if __name__ == "__main__":
     "Plot dei valori calcolati con il modello"
 
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=8))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=16))
     plt.plot(days, totalModelInfected[:], label="Infected (Model and Predicted)")
 
     plt.plot(dateForPlot[constants.firstDay:lastDayIteration[k]], data[constants.firstDay:lastDayIteration[k], 0], label="Infected(Observed)")

@@ -8,6 +8,9 @@ import csv
 import urllib3
 import requests
 
+
+EMILIA_ROMAGNA = 8
+LOMBARDIA = 3
 csv_url = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
 
 req = requests.get(csv_url)
@@ -24,7 +27,7 @@ df_regione = pandas.DataFrame(columns=columns);
 for index, row in df.iterrows():
 
     """Scegliere la regione da voler analizzare"""
-    if (row['codice_regione'] == 8 ):
+    if (row['codice_regione'] == EMILIA_ROMAGNA):
         df_regione = df_regione.append(row[columns]);
 
 

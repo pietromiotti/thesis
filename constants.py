@@ -18,6 +18,8 @@ class constants :
     #Popolazione dell'Emilia Romagna
     N = 4459000
 
+    #Popolazione Lombardia
+    #N = 10060000
     """
     In questa fase decidiamo come procedere con il modello: 
         - totalDays: sono i giorni totali di cui possediamo i dati osservati
@@ -25,7 +27,7 @@ class constants :
         - daysIteration sono i giorni che decidiamo di prendere in considerazione per il processo di ottimizzazione discretizzato
         - daysFirstIteration sono i giorni che predisponiamo per la prima fase del processo di ottimizzazione in cui facciamo una prima stima dei parametri
     """
-    totalDays = len(data) - 10
+    totalDays = len(data)
 
     daysFirstIteration = 30
 
@@ -55,5 +57,5 @@ class constants :
     ERROR_RANGE_MAX_INTERVAL = 300
 
 
-    daysPrevision = 60
+    daysPrevision = 30
 
